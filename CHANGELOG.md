@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### English
+
+- **Fix(client): the translate button no longer spins forever when it mounts during an auto-translation.** On mount the button asks `/translate/state`; a `busy` answer (a translation running in this session that the page did not start, typically auto-translate) set the spinner, and nothing ever asked again: no request of the page's own would settle it, so it kept spinning after the card had landed until the panel remounted. While the host answers `busy`, the button now asks again every 3 s and settles to ✓ on `ready`, or back to the clickable icon on `idle` (the run failed or was cancelled).
+
+### 中文
+
+- **修复(客户端)：在自动翻译进行中挂载的「译成人话」按钮不再一直转圈。** 按钮挂载时会问一次 `/translate/state`；回答 `busy`（本会话有翻译在跑，但不是本页发起的，通常是自动翻译）时按钮转圈，之后再也不问：本页没有任何请求会结束它，译文卡片出来后它仍一直转，直到面板重新挂载。现在宿主回答 `busy` 时，按钮每 3 秒再问一次：`ready` 变 ✓，`idle`（翻译失败或取消）回到可点。
+
 ## 0.6.71 (2026-11-23)
 
 ### English
@@ -17,16 +27,6 @@
   - `replace` —— 译文占据回复的位置，底部保留一条小栏（`✦ Gemini 翻译 · 显示原文 · 复制`）可翻回原文。
   - **仅影响显示**：会话与模型上下文仍保留原文。隐藏逻辑是一条声明式 `:has()` 样式规则，依据卡片自身的 `data-display` / `data-show-original`；DOM 与会话都不被改写。若 DSH 将来在中间插入节点，规则会**自然失效并同时显示两份**——失败方向是"多显示"，绝不是"回复被永久隐藏"。
   - 四语言文案齐全；配置校验、`/status`、HTTP 契约与 DOM 测试均已更新。
-
-## Unreleased
-
-### English
-
-- **Feat(translate): show the translation in the reply's place (`translateDisplay: replace`).** A new setting, "Translation display" (Settings, next to the translate-button switch; also `translateDisplay` in config or `DSH_AGY_TRANSLATE_DISPLAY`), chooses between the existing card under the reply (`card`, the default) and `replace`, where the translated reply shows the translation as if it were the reply, with a small footer to flip back to the original and to copy. It is display only: the session, and so the model's own context, keeps the original text. The reply is hidden by a stylesheet `:has()` rule keyed on the translation node DSH seats right after it (`anchorSeq + 0.1`), so nothing in the DOM or the session is rewritten; if DSH ever seats another node in between, both texts simply show. "Show original" brings back DSH's own full reply rather than the record's 8000-character copy.
-
-### 中文
-
-- **新增(翻译)：在回复原位显示译文（`translateDisplay: replace`）。** 新设置「译文显示方式」（设置面板，单条翻译按钮开关旁；也可在配置里写 `translateDisplay`，或用 `DSH_AGY_TRANSLATE_DISPLAY`）可在现有的「回复下方卡片」（`card`，缺省）和「替换原文」（`replace`）之间切换。替换模式下，已翻译的回复直接显示译文，脚注可切回原文、复制译文。只改显示：会话里、也就是模型自己的上下文里，原文不变。隐藏原文靠样式表 `:has()` 规则：DSH 把译文节点紧排在被翻译回复之后（`anchorSeq + 0.1`），规则据此隐藏那条回复，不改 DOM、不改会话；若两者之间被插入别的节点，规则不再匹配，原文和译文都会显示。「查看原文」切回的是 DSH 自己渲染的完整回复，不是记录里截断到 8000 字的副本。
 
 ## 0.6.70 (2026-11-23)
 

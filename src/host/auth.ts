@@ -4,6 +4,7 @@
 // the client panel and pipe the code back. We never read, write, copy, or
 // move the OAuth token file itself — the official binary owns credentials.
 import { extractAuthUrl, looksLikeAuthFailure } from '../common/types.ts'
+import { consoleOutputEncoding, makeLineDecoder } from '../runtime/agy/console.ts'
 import { openBrowser } from './oauth.ts'
 import { ensureIsolatedKeychain, isolatedHomeEnv, probeProcess, proxyEnvFor, startAgyProcess, type RunningProcess } from './runner.ts'
 import { detectSystemProxy } from './wincred.ts'
@@ -130,9 +131,11 @@ export class AuthHelper {
         }
       },
     });
-    proc.child.stderr?.on('data', (chunk: string) => {
-      if (this.capturedUrl) return;
-      const url = extractAuthUrl(chunk);
+    // Decode complete lines so pipe chunk boundaries cannot truncate the URL.
+    const stderrDecoder = makeLineDecoder(consoleOutputEncoding());
+    const captureStderrUrl = (text: string) => {
+      if (this.probe !== proc || this.capturedUrl) return;
+      const url = extractAuthUrl(text);
       if (url) {
         this.capturedUrl = url;
         this.urlWaiter?.(url);
@@ -140,7 +143,12 @@ export class AuthHelper {
         if (this.urlTimer) clearTimeout(this.urlTimer);
         this.urlTimer = null;
       }
+    };
+    proc.child.stderr?.on('data', (chunk: Buffer) => {
+      if (this.capturedUrl) return;
+      captureStderrUrl(stderrDecoder.push(chunk));
     });
+    proc.child.stderr?.once('end', () => captureStderrUrl(stderrDecoder.flush()));
     this.probe = proc;
     return proc;
   }
